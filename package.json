@@ -4,6 +4,7 @@
   "description": "A lightweight, powerful javascript datetime picker",
   "scripts": {
     "build": "run-s build:pre build:build build:esm build:types build:post",
+    "prepack": "run-s build",
     "build:pre": "rimraf dist",
     "build:build": "ts-node --transpile-only build.ts",
     "build:esm": "tsc -p tsconfig.esm.json",
