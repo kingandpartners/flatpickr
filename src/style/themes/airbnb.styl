@@ -28,21 +28,12 @@ $selectedDayForeground = #fff
 	padding 0
 	border-right 0
 
-span.flatpickr-day
+.flatpickr-day
 	&, &.prevMonthDay, &.nextMonthDay
 		border-radius 0 !important
 		border 1px solid $dayHoverBackground
 		max-width none
 		border-right-color transparent
-
-		&:nth-child(n+8)
-			border-top-color transparent
-
-		&:nth-child(7n-6)
-			border-left 0
-
-		&:nth-child(n+36)
-			border-bottom 0
 
 		&:nth-child(-n+7)
 			margin-top 0
@@ -63,13 +54,22 @@ span.flatpickr-day
 		&.today, &.selected
 			z-index 2
 
+.flatpickr-day-row:nth-child(n+2) .flatpickr-day
+	border-top-color transparent
+
+.flatpickr-day-cell:nth-child(1) .flatpickr-day
+	border-left 0
+
+.flatpickr-day-row:nth-child(6) .flatpickr-day
+	border-bottom 0
+
 .rangeMode .flatpickr-day
 	margin-top -1px
 
 .flatpickr-weekwrapper .flatpickr-weeks
 	box-shadow none
 
-.flatpickr-weekwrapper span.flatpickr-day
+.flatpickr-weekwrapper .flatpickr-day
 	border 0
 	margin -1px 0 0 -1px
 
@@ -79,7 +79,7 @@ span.flatpickr-day
 
 @css {
 	@media screen and (min-width:0\0) and (min-resolution: +72dpi) {
-		span.flatpickr-day {
+		.flatpickr-day {
 			display: block;
 			flex: 1 0 auto;
 		}

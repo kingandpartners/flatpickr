@@ -67,11 +67,11 @@
 
   &.multiMonth
     .flatpickr-days .dayContainer:nth-child(n+1)
-      & .flatpickr-day.inRange:nth-child(7n+7)
+      & .flatpickr-day-row td:nth-child(7) .flatpickr-day.inRange
         box-shadow: none !important;
 
     .flatpickr-days .dayContainer:nth-child(n+2)
-      & .flatpickr-day.inRange:nth-child(7n+1)
+      & .flatpickr-day-row td:nth-child(1) .flatpickr-day.inRange
         box-shadow: -2px 0 0 #e6e6e6, 5px 0 0 #e6e6e6
 
 
@@ -405,29 +405,31 @@
 .flatpickr-weekdays
   background $weekdaysBackground
   text-align center
-  overflow hidden
-  width 100%
-  display flex
-  align-items center
-  height $weekdaysHeight
 
-  .flatpickr-weekdaycontainer
-    display flex
-    flex 1
-
-
-
-span.flatpickr-weekday
+.flatpickr-weekday
   cursor default
   font-size 90%
   background $monthBackground
   color $weekdaysForeground
-  line-height 1
+  line-height $weekdaysHeight
   margin 0
   text-align center
-  display block
-  flex 1
+  display table-cell
   font-weight bolder
+  padding 0
+
+.flatpickr-table
+  border-collapse collapse
+  width 100%
+  table-layout fixed
+
+.flatpickr-day-row
+  height $daySize
+
+.flatpickr-day-cell
+  padding 0
+  width 14.2857143%
+  text-align center
 
 
 .dayContainer, .flatpickr-weeks
@@ -456,13 +458,7 @@ span.flatpickr-weekday
   min-width ($daysWidth)
   max-width ($daysWidth)
   box-sizing border-box
-  display inline-block
-  display -ms-flexbox
-  display flex
-  -ms-flex-wrap wrap
-  flex-wrap wrap
-  -ms-flex-pack: justify
-  justify-content space-around
+  display block
   transform: translate3d(0px, 0px, 0px);
   opacity 1
 
@@ -471,6 +467,7 @@ span.flatpickr-weekday
 
 
 .flatpickr-day
+  appearance none
   background none
   border 1px solid transparent
   border-radius 150px
@@ -479,14 +476,13 @@ span.flatpickr-weekday
   cursor pointer
 
   font-weight 400
-  width 14.2857143%
-  flex-basis 14.2857143%
-  max-width $daySize
+  width 100%
+  max-width none
   height $daySize
   line-height $daySize
   margin 0
 
-  display inline-block
+  display block
   position relative
   justify-content center
   text-align center
@@ -530,9 +526,6 @@ span.flatpickr-weekday
       border-radius 0 50px 50px 0
 
     // Avoid adding extra fill because it overflows in multimonth mode
-    &.startRange + .endRange:not(:nth-child(7n+1))
-      box-shadow: (-5*$dayMargin) 0 0 $selectedDayBackground
-
     &.startRange.endRange
       border-radius 50px
 
@@ -583,7 +576,7 @@ span.flatpickr-weekday
     width 100%
     line-height $weekdaysHeight
 
-  span.flatpickr-day
+  .flatpickr-day
     &, &:hover
       display block
       width 100%
@@ -592,6 +585,17 @@ span.flatpickr-weekday
       background transparent
       cursor default
       border none
+
+.sr-only
+  position absolute
+  width 1px
+  height 1px
+  padding 0
+  margin -1px
+  overflow hidden
+  clip rect(0, 0, 0, 0)
+  white-space nowrap
+  border 0
 
 
 .flatpickr-innerContainer

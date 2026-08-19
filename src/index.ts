@@ -597,7 +597,6 @@ function FlatpickrInstance(
         "div",
         "flatpickr-rContainer"
       );
-      self.rContainer.appendChild(buildWeekdays());
 
       if (!self.daysContainer) {
         self.daysContainer = createElement<HTMLDivElement>(
@@ -684,11 +683,12 @@ function FlatpickrInstance(
   ) {
     const dateIsEnabled = isEnabled(date, true),
       dayElement = createElement<DayElement>(
-        "span",
+        "button",
         className,
         date.getDate().toString()
       );
 
+    dayElement.setAttribute("type", "button");
     dayElement.dateObj = date;
     dayElement.$i = i;
     dayElement.setAttribute(
@@ -760,17 +760,22 @@ function FlatpickrInstance(
     if (self.config.mode === "range") onMouseOver(targetNode);
   }
 
+  function getMonthDayElements(month: Element) {
+    return Array.from(month.querySelectorAll(".flatpickr-day")) as DayElement[];
+  }
+
   function getFirstAvailableDay(delta: number) {
     const startMonth = delta > 0 ? 0 : self.config.showMonths - 1;
     const endMonth = delta > 0 ? self.config.showMonths : -1;
 
     for (let m = startMonth; m != endMonth; m += delta) {
       const month = (self.daysContainer as HTMLDivElement).children[m];
-      const startIndex = delta > 0 ? 0 : month.children.length - 1;
-      const endIndex = delta > 0 ? month.children.length : -1;
+      const monthDays = getMonthDayElements(month);
+      const startIndex = delta > 0 ? 0 : monthDays.length - 1;
+      const endIndex = delta > 0 ? monthDays.length : -1;
 
       for (let i = startIndex; i != endIndex; i += delta) {
-        const c = month.children[i] as DayElement;
+        const c = monthDays[i];
         if (c.className.indexOf("hidden") === -1 && isEnabled(c.dateObj))
           return c;
       }
@@ -792,20 +797,21 @@ function FlatpickrInstance(
       m += loopDelta
     ) {
       const month = (self.daysContainer as HTMLDivElement).children[m];
+      const monthDays = getMonthDayElements(month);
       const startIndex =
         givenMonth - self.currentMonth === m
           ? current.$i + delta
           : delta < 0
-          ? month.children.length - 1
+          ? monthDays.length - 1
           : 0;
-      const numMonthDays = month.children.length;
+      const numMonthDays = monthDays.length;
 
       for (
         let i = startIndex;
         i >= 0 && i < numMonthDays && i != (delta > 0 ? numMonthDays : -1);
         i += loopDelta
       ) {
-        const c = month.children[i] as DayElement;
+        const c = monthDays[i];
         if (
           c.className.indexOf("hidden") === -1 &&
           isEnabled(c.dateObj) &&
@@ -854,7 +860,7 @@ function FlatpickrInstance(
     );
 
     const daysInMonth = self.utils.getDaysInMonth(month, year),
-      days = window.document.createDocumentFragment(),
+      days: DayElement[] = [],
       isMultiMonth = self.config.showMonths > 1,
       prevMonthDayClass = isMultiMonth ? "prevMonthDay hidden" : "prevMonthDay",
       nextMonthDayClass = isMultiMonth ? "nextMonthDay hidden" : "nextMonthDay";
@@ -864,7 +870,7 @@ function FlatpickrInstance(
 
     // prepend days from the ending of previous month
     for (; dayNumber <= prevMonthDays; dayNumber++, dayIndex++) {
-      days.appendChild(
+      days.push(
         createDay(
           `flatpickr-day ${prevMonthDayClass}`,
           new Date(year, month - 1, dayNumber),
@@ -876,7 +882,7 @@ function FlatpickrInstance(
 
     // Start at 1 since there is no 0th day
     for (dayNumber = 1; dayNumber <= daysInMonth; dayNumber++, dayIndex++) {
-      days.appendChild(
+      days.push(
         createDay(
           "flatpickr-day",
           new Date(year, month, dayNumber),
@@ -893,7 +899,7 @@ function FlatpickrInstance(
       (self.config.showMonths === 1 || dayIndex % 7 !== 0);
       dayNum++, dayIndex++
     ) {
-      days.appendChild(
+      days.push(
         createDay(
           `flatpickr-day ${nextMonthDayClass}`,
           new Date(year, month + 1, dayNum % daysInMonth),
@@ -903,12 +909,97 @@ function FlatpickrInstance(
       );
     }
 
-    //updateNavigationCurrentMonth();
+    const weekdays = [...self.l10n.weekdays.shorthand];
+    const weekdaysLonghand = [...self.l10n.weekdays.longhand];
+
+    if (
+      self.l10n.firstDayOfWeek > 0 &&
+      self.l10n.firstDayOfWeek < weekdays.length
+    ) {
+      weekdays.push(...weekdays.splice(0, self.l10n.firstDayOfWeek));
+      weekdaysLonghand.push(
+        ...weekdaysLonghand.splice(0, self.l10n.firstDayOfWeek)
+      );
+    }
 
     const dayContainer = createElement<HTMLDivElement>("div", "dayContainer");
-    dayContainer.appendChild(days);
+    const table = createElement<HTMLTableElement>("table", "flatpickr-table");
+    const headingId = `month-year-heading-${year}-${month}`;
+    table.setAttribute("role", "grid");
+    table.setAttribute("aria-labelledby", headingId);
+
+    const caption = createElement<HTMLTableCaptionElement>(
+      "caption",
+      "sr-only"
+    );
+    caption.id = headingId;
+    caption.textContent = `${monthToStr(month, false, self.l10n)} ${year}`;
+    table.appendChild(caption);
+
+    const thead = createElement<HTMLTableSectionElement>(
+      "thead",
+      "flatpickr-weekdays"
+    );
+    const headingRow = createElement<HTMLTableRowElement>(
+      "tr",
+      "flatpickr-weekday-row"
+    );
+
+    weekdays.forEach((weekday, idx) => {
+      const th = createElement<HTMLTableCellElement>("th", "flatpickr-weekday");
+      th.setAttribute("scope", "col");
+
+      const srOnly = createElement<HTMLSpanElement>(
+        "span",
+        "sr-only",
+        weekdaysLonghand[idx]
+      );
+      const visibleLabel = createElement<HTMLSpanElement>("span", "", weekday);
+      visibleLabel.setAttribute("aria-hidden", "true");
+
+      th.appendChild(srOnly);
+      th.appendChild(visibleLabel);
+      headingRow.appendChild(th);
+    });
+
+    thead.appendChild(headingRow);
+    table.appendChild(thead);
+
+    const tbody = createElement<HTMLTableSectionElement>(
+      "tbody",
+      "flatpickr-days-body"
+    );
+
+    for (let i = 0; i < days.length; i += 7) {
+      const row = createElement<HTMLTableRowElement>("tr", "flatpickr-day-row");
+      const week = days.slice(i, i + 7);
+
+      week.forEach((dayElement) => {
+        const td = createElement<HTMLTableCellElement>(
+          "td",
+          "flatpickr-day-cell"
+        );
+        td.appendChild(dayElement);
+        row.appendChild(td);
+      });
+
+      tbody.appendChild(row);
+    }
+
+    table.appendChild(tbody);
+    dayContainer.appendChild(table);
 
     return dayContainer;
+  }
+
+  function getAllDayElements(): DayElement[] {
+    const allDays: DayElement[] = [];
+    if (!self.daysContainer) return allDays;
+    const dayElements = self.daysContainer.querySelectorAll(".flatpickr-day");
+    dayElements.forEach((el) => {
+      allDays.push(el as DayElement);
+    });
+    return allDays;
   }
 
   function buildDays() {
@@ -932,7 +1023,45 @@ function FlatpickrInstance(
 
     self.daysContainer.appendChild(frag);
 
-    self.days = self.daysContainer.firstChild as HTMLDivElement;
+    const firstDayContainer = self.daysContainer.firstChild as HTMLDivElement;
+    const allDays = getAllDayElements();
+
+    // Create a virtual days container that provides backward compatibility
+    // while maintaining the semantic table structure
+    (self as any).days = {
+      __realElement: firstDayContainer,
+      get offsetWidth() {
+        return firstDayContainer.offsetWidth;
+      },
+      get offsetHeight() {
+        return firstDayContainer.offsetHeight;
+      },
+      get childNodes() {
+        return allDays as any;
+      },
+      get children() {
+        return allDays as any;
+      },
+      get firstElementChild() {
+        return allDays[0] || null;
+      },
+      get firstChild() {
+        return allDays[0] || null;
+      },
+      contains(el: Node) {
+        return firstDayContainer.contains(el);
+      },
+      appendChild(el: Node) {
+        return firstDayContainer.appendChild(el);
+      },
+      querySelectorAll(selector: string) {
+        return firstDayContainer.querySelectorAll(selector);
+      },
+      querySelector(selector: string) {
+        return firstDayContainer.querySelector(selector);
+      },
+    };
+
     if (self.config.mode === "range" && self.selectedDates.length === 1) {
       onMouseOver();
     }
@@ -1240,50 +1369,12 @@ function FlatpickrInstance(
     return self.timeContainer;
   }
 
-  function buildWeekdays() {
-    if (!self.weekdayContainer)
-      self.weekdayContainer = createElement<HTMLDivElement>(
-        "div",
-        "flatpickr-weekdays"
-      );
-    else clearNode(self.weekdayContainer);
-
-    for (let i = self.config.showMonths; i--; ) {
-      const container = createElement<HTMLDivElement>(
-        "div",
-        "flatpickr-weekdaycontainer"
-      );
-
-      self.weekdayContainer.appendChild(container);
-    }
-
-    updateWeekdays();
-
-    return self.weekdayContainer;
-  }
-
   function updateWeekdays() {
-    if (!self.weekdayContainer) {
+    if (!self.daysContainer) {
       return;
     }
 
-    const firstDayOfWeek = self.l10n.firstDayOfWeek;
-    let weekdays = [...self.l10n.weekdays.shorthand];
-
-    if (firstDayOfWeek > 0 && firstDayOfWeek < weekdays.length) {
-      weekdays = [
-        ...weekdays.splice(firstDayOfWeek, weekdays.length),
-        ...weekdays.splice(0, firstDayOfWeek),
-      ];
-    }
-
-    for (let i = self.config.showMonths; i--; ) {
-      self.weekdayContainer.children[i].innerHTML = `
-      <span class='flatpickr-weekday'>
-        ${weekdays.join("</span><span class='flatpickr-weekday'>")}
-      </span>
-      `;
-    }
+    buildDays();
   }
 
   /* istanbul ignore next */
@@ -1825,7 +1916,9 @@ function FlatpickrInstance(
 
     const hoverDate = elem
         ? elem.dateObj.getTime()
-        : (self.days.firstElementChild as DayElement).dateObj.getTime(),
+        : ((self.daysContainer?.querySelector(
+            ".flatpickr-day"
+          ) as DayElement | null)?.dateObj.getTime() as number),
       initialDate = (self.parseDate(
         self.selectedDates[0],
         undefined,
@@ -1850,9 +1943,7 @@ function FlatpickrInstance(
     }
 
     const hoverableCells = Array.from(
-      self.rContainer!.querySelectorAll(
-        `*:nth-child(-n+${self.config.showMonths}) > .${cellClass}`
-      )
+      (self.rContainer || self.daysContainer)!.querySelectorAll(`.${cellClass}`)
     ) as DayElement[];
 
     hoverableCells.forEach((dayElem) => {
@@ -2415,7 +2506,7 @@ function FlatpickrInstance(
 
   const CALLBACKS: { [k in keyof Options]: Function[] } = {
     locale: [setupLocale, updateWeekdays],
-    showMonths: [buildMonths, setCalendarWidth, buildWeekdays],
+    showMonths: [buildMonths, setCalendarWidth, buildDays],
     minDate: [jumpToDate],
     maxDate: [jumpToDate],
     positionElement: [updatePositionElement],
